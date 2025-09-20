@@ -1,9 +1,9 @@
-name: Build and Deploy via FTP
+name: Build and Deploy Laravel + Inertia + React
 
 on:
   push:
     branches:
-      - main # change to your main branch
+      - main # deploy on pushes to main
 
 jobs:
   build-and-deploy:
@@ -14,7 +14,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2. Set up PHP for Laravel
+      # 2. Set up PHP
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -29,15 +29,15 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: '22.19.0'
 
-      # 5. Install Node modules & build React assets
-      - name: Build frontend assets
+      # 5. Install Node modules & build frontend assets
+      - name: Build React assets
         run: |
           npm ci
           npm run build
 
-      # 6. Optional: Clear Laravel caches
+      # 6. Clear Laravel caches
       # - name: Clear Laravel caches
       #   run: |
       #     php artisan cache:clear
@@ -45,19 +45,23 @@ jobs:
       #     php artisan route:clear
       #     php artisan view:clear
 
-      # 7. Deploy files via FTP
+      # 7. Prepare deploy folder (exclude node_modules)
+      - name: Prepare deploy folder
+        run: |
+          mkdir deploy
+          # Copy Laravel files
+          cp -r app bootstrap config database public resources routes vendor artisan deploy/
+          # Copy built frontend assets
+          cp -r public/build deploy/public/build
+
+      # 8. Deploy via FTP
       - name: Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftps # <- add this line
-          port: 21 # usually 21 for FTPS, check your cPanel FTP info
-          local-dir: ./
-          server-dir: /public_html/
-          exclude: |
-            .git*
-            node_modules
-            tests
-            .github
+          protocol: ftps # change to ftps if your server requires it
+          port: 21 # FTP port
+          local-dir: deploy/ # only upload deploy folder
+          server-dir: /
