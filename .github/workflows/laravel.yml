@@ -38,12 +38,12 @@ jobs:
           npm run build
 
       # 6. Optional: Clear Laravel caches
-      - name: Clear Laravel caches
-        run: |
-          php artisan cache:clear
-          php artisan config:clear
-          php artisan route:clear
-          php artisan view:clear
+      # - name: Clear Laravel caches
+      #   run: |
+      #     php artisan cache:clear
+      #     php artisan config:clear
+      #     php artisan route:clear
+      #     php artisan view:clear
 
       # 7. Deploy files via FTP
       - name: Deploy via FTP
