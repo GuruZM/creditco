@@ -1,0 +1,46 @@
+name: Deploy to cPanel
+
+on:
+  push:
+    branches:
+      - main  # deploy on pushes to main branch
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Set up PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, bcmath, pdo_mysql, curl
+
+    - name: Install Composer dependencies
+      run: composer install --no-dev --optimize-autoloader
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20.19.0'
+
+    - name: Install Node dependencies and build
+      run: |
+        npm ci
+        npm run build
+
+    - name: Archive production files
+      run: zip -r deploy.zip . -x ".git*" "*.github*" "node_modules/*" "tests/*"
+
+    - name: Deploy to cPanel via SFTP
+      uses: appleboy/scp-action@v0.1.3
+      with:
+        host: ${{ secrets.CPANEL_HOST }}
+        username: ${{ secrets.CPANEL_USER }}
+        password: ${{ secrets.CPANEL_PASSWORD }}
+        port: 22
+        source: "deploy.zip"
+        target: "/home/credftus/public_html/"
