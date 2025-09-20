@@ -47,7 +47,7 @@ jobs:
 
       # 7. Deploy files via FTP
       - name: Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@4.6.0
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
           server: ${{ secrets.FTP_HOST }} # FTP host, e.g., ftp.yourdomain.com
           username: ${{ secrets.FTP_USER }} # FTP username
