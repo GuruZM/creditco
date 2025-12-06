@@ -1,4 +1,4 @@
-import { dashboard, login, register } from '@/routes';
+import { dashboard } from '@/routes';
 import { Link } from '@inertiajs/react';
 const Hero = ({ auth }: { auth: any }) => {
     return (
@@ -94,14 +94,15 @@ const Hero = ({ auth }: { auth: any }) => {
                             ) : (
                                 <>
                                     <Link
-                                        href={login()}
-                                        className="flex items-center rounded-sm border border-white px-5 py-1.5 text-sm leading-normal text-[#1b1b18] text-white hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                                        href="/login"
+                                        className="flex items-center rounded-sm border border-white px-5 py-1.5 text-sm leading-normal text-white hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
                                     >
                                         Log in
                                     </Link>
+
                                     <Link
-                                        href={register()}
-                                        className="flex items-center rounded-sm border border-white px-5 py-1.5 text-sm leading-normal text-[#1b1b18] text-white hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                                        href="/signup"
+                                        className="flex items-center rounded-sm border border-white px-5 py-1.5 text-sm leading-normal text-white hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
                                     >
                                         Register
                                     </Link>

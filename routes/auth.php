@@ -7,6 +7,10 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\Auth\BorrowerRegisterController;
+use App\Http\Controllers\Auth\InvestorRegisterController;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\Auth\RegisterController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -33,6 +37,27 @@ Route::middleware('guest')->group(function () {
 
     Route::post('reset-password', [NewPasswordController::class, 'store'])
         ->name('password.store');
+});
+
+Route::middleware('guest')->prefix('signup')->group(function () {
+
+    // Step 1: choose borrower or investor
+    Route::get('/', [\App\Http\Controllers\Auth\RegisterController::class, 'showRoleSelection'])
+        ->name('signup');
+
+    // Borrower
+    Route::get('/borrower', [\App\Http\Controllers\Auth\BorrowerRegisterController::class, 'create'])
+        ->name('signup.borrower');
+
+    Route::post('/borrower', [\App\Http\Controllers\Auth\BorrowerRegisterController::class, 'store'])
+        ->name('signup.borrower.store');
+
+    // Investor
+    Route::get('/investor', [\App\Http\Controllers\Auth\InvestorRegisterController::class, 'create'])
+        ->name('signup.investor');
+
+    Route::post('/investor', [\App\Http\Controllers\Auth\InvestorRegisterController::class, 'store'])
+        ->name('signup.investor.store');
 });
 
 Route::middleware('auth')->group(function () {
