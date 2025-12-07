@@ -6,6 +6,8 @@ use App\Http\Controllers\InvestorController;
 use App\Http\Controllers\BorrowerController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\CoinController;
+use App\Http\Controllers\Borrower\CoinController as BorrowerCoinController;
+use App\Http\Controllers\Investor\CoinController as InvestorCoinController;
 Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
@@ -26,6 +28,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword']);
     Route::delete('/users/{user}', [UserController::class, 'destroy']);
      Route::get('/admin/coins', [CoinController::class, 'index']);
+    });
+
+    Route::middleware(['role:borrower'])->group(function () {
+    Route::get('/borrower/coins', [BorrowerCoinController::class, 'index']);
+    Route::post('/borrower/coins', [BorrowerCoinController::class, 'store']);
+});
+
+  Route::middleware(['role:investor'])->group(function () {
+        Route::get('/investor/coins', [InvestorCoinController::class, 'index']);
+        // later: express interest, etc.
     });
 }); 
 

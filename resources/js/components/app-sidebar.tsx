@@ -101,7 +101,7 @@ export function AppSidebar() {
             },
             {
                 title: 'Coins',
-                href: '/coins',
+                href: '/investor/coins',
                 icon: HandCoins,
             },
         ];
@@ -114,7 +114,7 @@ export function AppSidebar() {
             },
             {
                 title: 'Coins',
-                href: '/coins',
+                href: '/borrower/coins',
                 icon: HandCoins,
             },
         ];

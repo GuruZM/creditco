@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
-        <script>
+        {{-- <script>
             (function() {
                 const appearance = '{{ $appearance ?? "system" }}';
 
@@ -17,7 +17,34 @@
                     }
                 }
             })();
-        </script>
+        </script> --}}
+           <script>
+    (function () {
+        const root = document.documentElement;
+
+        // 🔹 1. Try to get stored preference (localStorage wins)
+        const stored =
+            localStorage.getItem('appearance') ||
+            localStorage.getItem('theme') ||
+            null;
+
+        // 🔹 2. Fallback to server-provided appearance or "light"
+        const serverAppearance = '{{ $appearance ?? "light" }}';
+        const effective = stored || serverAppearance || 'light';
+
+        if (effective === 'dark') {
+            root.classList.add('dark');
+        } else {
+            // ✅ FORCE LIGHT AS DEFAULT
+            root.classList.remove('dark');
+            root.classList.add('light');
+
+            // Normalise all keys so future loads stay light
+            localStorage.setItem('appearance', 'light');
+            localStorage.setItem('theme', 'light');
+        }
+    })();
+</script>
 
         {{-- Inline style to set the HTML background color based on our theme in app.css --}}
         <style>

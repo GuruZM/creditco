@@ -41,6 +41,11 @@ class Borrower extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function coins() 
+    {
+        return $this->hasMany(Coin::class);
+    }
+
     public function documentVerifications() 
     {
         return $this->hasMany(BorrowerDocumentVerification::class);
