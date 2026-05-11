@@ -16,37 +16,74 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     ArrowRightCircle,
     Building2,
     Calendar,
+    CheckCircle2,
     Coins,
     FileText,
     Filter,
     Info,
+    LoaderCircle,
     Search,
+    XCircle,
 } from 'lucide-react';
 import { useState } from 'react';
 
 type CoinStatus = 'pending_review' | 'approved' | 'rejected' | string;
+
+type Interest = {
+    id: number;
+    investor_id: number;
+    investor_name: string | null;
+    investor_email: string | null;
+    note: string | null;
+    funding_status: string;
+    funding_started_at: string | null;
+    investor_agreed_at: string | null;
+    created_at: string | null;
+};
+
+type Terms = {
+    interest_rate: number | null;
+    service_fee_percent: number | null;
+    duration_days: number | null;
+    installments_count: number | null;
+    installment_interval_days: number | null;
+    total_repayment_amount: number | null;
+    installment_amount: number | null;
+    terms_text: string | null;
+    set_at: string | null;
+    borrower_agreed_at: string | null;
+};
 
 type Coin = {
     id: number;
     request: string;
     date: string | null;
     purchase_order: string | null;
+    purchase_order_file_url: string | null;
+    purchase_order_file_name: string | null;
     contract: string | null;
     request_amount: number;
     source: string | null;
     duration: string | null;
     industry: string | null;
     status: CoinStatus;
+    rejection_reason: string | null;
+    reviewed_at: string | null;
+    reviewer_name: string | null;
 
     borrower_company: string | null;
     borrower_name: string | null;
     created_at: string | null;
+
+    terms: Terms;
+    interests: Interest[];
 };
 
 type Paginated<T> = {
@@ -101,6 +138,39 @@ export default function AdminCoinsIndex() {
 
     const [viewOpen, setViewOpen] = useState(false);
     const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
+    const [rejectMode, setRejectMode] = useState(false);
+    const [rejectReason, setRejectReason] = useState('');
+    const [reviewing, setReviewing] = useState<'approve' | 'reject' | 'terms' | null>(
+        null,
+    );
+    const [rejectError, setRejectError] = useState<string | null>(null);
+
+    const [termsMode, setTermsMode] = useState<'approve' | 'edit' | null>(null);
+    const [terms, setTerms] = useState({
+        interest_rate: '',
+        service_fee_percent: '',
+        duration_days: '',
+        installments_count: '',
+        installment_interval_days: '',
+        terms_text: '',
+    });
+    const [termsErrors, setTermsErrors] = useState<Record<string, string>>({});
+    const [startingFundingFor, setStartingFundingFor] = useState<number | null>(
+        null,
+    );
+
+    const handleStartFunding = (coinId: number, interestId: number) => {
+        setStartingFundingFor(interestId);
+        router.post(
+            `/admin/coins/${coinId}/interests/${interestId}/start-funding`,
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setStartingFundingFor(null),
+                onSuccess: () => setViewOpen(false),
+            },
+        );
+    };
 
     const applyFilters = () => {
         router.get(
@@ -119,7 +189,129 @@ export default function AdminCoinsIndex() {
 
     const openViewDialog = (coin: Coin) => {
         setSelectedCoin(coin);
+        setRejectMode(false);
+        setRejectReason('');
+        setRejectError(null);
         setViewOpen(true);
+    };
+
+    const openTermsForm = (mode: 'approve' | 'edit') => {
+        if (!selectedCoin) return;
+        const t = selectedCoin.terms;
+        setTerms({
+            interest_rate: t.interest_rate?.toString() ?? '',
+            service_fee_percent: t.service_fee_percent?.toString() ?? '',
+            duration_days: t.duration_days?.toString() ?? '',
+            installments_count: t.installments_count?.toString() ?? '',
+            installment_interval_days: t.installment_interval_days?.toString() ?? '',
+            terms_text: t.terms_text ?? '',
+        });
+        setTermsErrors({});
+        setTermsMode(mode);
+    };
+
+    const closeTermsForm = () => {
+        setTermsMode(null);
+        setTermsErrors({});
+    };
+
+    const submitTerms = () => {
+        if (!selectedCoin) return;
+
+        const errors: Record<string, string> = {};
+        if (!terms.interest_rate || Number(terms.interest_rate) < 0) {
+            errors.interest_rate = 'Interest rate is required (annual %).';
+        }
+        if (!terms.duration_days || Number(terms.duration_days) < 1) {
+            errors.duration_days = 'Duration in days is required.';
+        }
+        if (!terms.installments_count || Number(terms.installments_count) < 1) {
+            errors.installments_count = 'Installments count is required.';
+        }
+        if (
+            !terms.installment_interval_days ||
+            Number(terms.installment_interval_days) < 1
+        ) {
+            errors.installment_interval_days = 'Interval days is required.';
+        }
+        if (Object.keys(errors).length > 0) {
+            setTermsErrors(errors);
+            return;
+        }
+
+        const payload = {
+            interest_rate: Number(terms.interest_rate),
+            service_fee_percent: terms.service_fee_percent
+                ? Number(terms.service_fee_percent)
+                : null,
+            duration_days: Number(terms.duration_days),
+            installments_count: Number(terms.installments_count),
+            installment_interval_days: Number(terms.installment_interval_days),
+            terms_text: terms.terms_text || null,
+        };
+
+        setReviewing(termsMode === 'edit' ? 'terms' : 'approve');
+        const url =
+            termsMode === 'edit'
+                ? `/admin/coins/${selectedCoin.id}/terms`
+                : `/admin/coins/${selectedCoin.id}/approve`;
+
+        router.post(url, payload, {
+            preserveScroll: true,
+            onError: (errs) => setTermsErrors(errs as Record<string, string>),
+            onSuccess: () => {
+                setTermsMode(null);
+                setViewOpen(false);
+            },
+            onFinish: () => setReviewing(null),
+        });
+    };
+
+    const previewRepayment = (() => {
+        const principal = selectedCoin?.request_amount ?? 0;
+        const rate = Number(terms.interest_rate || 0);
+        const days = Number(terms.duration_days || 0);
+        const installments = Number(terms.installments_count || 0);
+        const fee = Number(terms.service_fee_percent || 0);
+        if (principal <= 0 || rate < 0 || days <= 0 || installments <= 0) {
+            return null;
+        }
+        const interest = (principal * rate * days) / 365 / 100;
+        const feeAmount = (principal * fee) / 100;
+        const total = principal + interest + feeAmount;
+        const installmentAmount = total / installments;
+        return { total, installmentAmount };
+    })();
+
+    const handleReject = () => {
+        if (!selectedCoin) {
+            return;
+        }
+        const reason = rejectReason.trim();
+        if (reason.length < 3) {
+            setRejectError(
+                'Please provide a rejection reason (at least 3 characters).',
+            );
+            return;
+        }
+        setRejectError(null);
+        setReviewing('reject');
+        router.post(
+            `/admin/coins/${selectedCoin.id}/reject`,
+            { reason },
+            {
+                preserveScroll: true,
+                onError: (errors) => {
+                    setRejectError(errors.reason ?? 'Could not reject coin.');
+                },
+                onFinish: () => {
+                    setReviewing(null);
+                },
+                onSuccess: () => {
+                    setViewOpen(false);
+                },
+            },
+        );
     };
 
     const totalCoins = coins.data.length;
@@ -324,7 +516,7 @@ export default function AdminCoinsIndex() {
                                 </div>
 
                                 {/* Coins table */}
-                                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+                                <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
                                     <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
                                         <thead className="bg-slate-50 dark:bg-slate-900">
                                             <tr>
@@ -620,6 +812,26 @@ export default function AdminCoinsIndex() {
                                             {selectedCoin.purchase_order ||
                                                 'Not provided'}
                                         </p>
+                                        {selectedCoin.purchase_order_file_url ? (
+                                            <a
+                                                href={
+                                                    selectedCoin.purchase_order_file_url
+                                                }
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-sky-600 underline underline-offset-2 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
+                                            >
+                                                <FileText className="h-3 w-3" />
+                                                View PO document
+                                                {selectedCoin.purchase_order_file_name
+                                                    ? ` (${selectedCoin.purchase_order_file_name})`
+                                                    : ''}
+                                            </a>
+                                        ) : (
+                                            <p className="mt-2 text-[10px] text-slate-500 dark:text-slate-500">
+                                                No PO document uploaded.
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/70">
@@ -643,6 +855,176 @@ export default function AdminCoinsIndex() {
                                     </p>
                                 </div>
 
+                                {selectedCoin.status === 'approved' &&
+                                selectedCoin.terms.set_at ? (
+                                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-500/30 dark:bg-emerald-500/10">
+                                        <p className="text-[11px] font-medium text-emerald-900 dark:text-emerald-300">
+                                            Commercial terms
+                                        </p>
+                                        <ul className="mt-2 grid gap-1 text-[11px] text-emerald-900 dark:text-emerald-200 sm:grid-cols-2">
+                                            <li>
+                                                Interest:{' '}
+                                                <span className="font-semibold">
+                                                    {selectedCoin.terms.interest_rate}
+                                                    %
+                                                </span>
+                                            </li>
+                                            <li>
+                                                Fee:{' '}
+                                                <span className="font-semibold">
+                                                    {selectedCoin.terms.service_fee_percent ??
+                                                        0}
+                                                    %
+                                                </span>
+                                            </li>
+                                            <li>
+                                                Duration:{' '}
+                                                <span className="font-semibold">
+                                                    {
+                                                        selectedCoin.terms
+                                                            .duration_days
+                                                    }{' '}
+                                                    days
+                                                </span>
+                                            </li>
+                                            <li>
+                                                Installments:{' '}
+                                                <span className="font-semibold">
+                                                    {
+                                                        selectedCoin.terms
+                                                            .installments_count
+                                                    }{' '}
+                                                    ×{' '}
+                                                    {
+                                                        selectedCoin.terms
+                                                            .installment_interval_days
+                                                    }
+                                                    d
+                                                </span>
+                                            </li>
+                                            <li>
+                                                Total repayment:{' '}
+                                                <span className="font-semibold">
+                                                    ZMW{' '}
+                                                    {selectedCoin.terms.total_repayment_amount?.toLocaleString()}
+                                                </span>
+                                            </li>
+                                            <li>
+                                                Per installment:{' '}
+                                                <span className="font-semibold">
+                                                    ZMW{' '}
+                                                    {selectedCoin.terms.installment_amount?.toLocaleString()}
+                                                </span>
+                                            </li>
+                                        </ul>
+                                        <p className="mt-2 text-[11px]">
+                                            Borrower agreement:{' '}
+                                            {selectedCoin.terms.borrower_agreed_at ? (
+                                                <span className="font-semibold text-emerald-700 dark:text-emerald-300">
+                                                    ✓ Agreed{' '}
+                                                    {
+                                                        selectedCoin.terms
+                                                            .borrower_agreed_at
+                                                    }
+                                                </span>
+                                            ) : (
+                                                <span className="font-semibold text-amber-700 dark:text-amber-300">
+                                                    Awaiting borrower
+                                                </span>
+                                            )}
+                                        </p>
+                                    </div>
+                                ) : null}
+
+                                {selectedCoin.status === 'approved' &&
+                                    selectedCoin.interests &&
+                                    selectedCoin.interests.length > 0 && (
+                                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/70">
+                                            <p className="text-[11px] font-medium text-slate-800 dark:text-slate-200">
+                                                Interested investors (
+                                                {selectedCoin.interests.length})
+                                            </p>
+                                            <ul className="mt-2 grid gap-2">
+                                                {selectedCoin.interests.map(
+                                                    (interest) => (
+                                                        <li
+                                                            key={interest.id}
+                                                            className="flex items-start justify-between gap-2 rounded-md border border-slate-200 bg-white p-2 text-[11px] dark:border-slate-800 dark:bg-slate-950"
+                                                        >
+                                                            <div className="min-w-0">
+                                                                <p className="truncate font-medium text-slate-800 dark:text-slate-200">
+                                                                    {interest.investor_name ||
+                                                                        'Investor'}
+                                                                </p>
+                                                                {interest.investor_email && (
+                                                                    <p className="truncate text-[10px] text-slate-500 dark:text-slate-500">
+                                                                        {
+                                                                            interest.investor_email
+                                                                        }
+                                                                    </p>
+                                                                )}
+                                                                {interest.note && (
+                                                                    <p className="mt-1 line-clamp-2 text-[10px] text-slate-600 dark:text-slate-400">
+                                                                        “
+                                                                        {
+                                                                            interest.note
+                                                                        }
+                                                                        ”
+                                                                    </p>
+                                                                )}
+                                                                <p className="mt-1 text-[10px]">
+                                                                    {interest.investor_agreed_at ? (
+                                                                        <span className="font-medium text-emerald-700 dark:text-emerald-300">
+                                                                            ✓ Agreed
+                                                                            to
+                                                                            terms
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="font-medium text-amber-700 dark:text-amber-300">
+                                                                            Awaiting
+                                                                            investor
+                                                                            agreement
+                                                                        </span>
+                                                                    )}
+                                                                </p>
+                                                            </div>
+                                                            {interest.funding_status ===
+                                                            'interested' ? (
+                                                                <Button
+                                                                    size="sm"
+                                                                    className="shrink-0 bg-sky-600 text-[11px] text-white hover:bg-sky-500"
+                                                                    onClick={() =>
+                                                                        handleStartFunding(
+                                                                            selectedCoin.id,
+                                                                            interest.id,
+                                                                        )
+                                                                    }
+                                                                    disabled={
+                                                                        startingFundingFor !==
+                                                                        null
+                                                                    }
+                                                                >
+                                                                    {startingFundingFor ===
+                                                                    interest.id ? (
+                                                                        <LoaderCircle className="mr-1 h-3 w-3 animate-spin" />
+                                                                    ) : null}
+                                                                    Start funding
+                                                                </Button>
+                                                            ) : (
+                                                                <Link
+                                                                    href={`/admin/coins/${selectedCoin.id}/interests/${interest.id}/funding`}
+                                                                    className="shrink-0 rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-[11px] font-medium text-sky-700 transition hover:bg-sky-100 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200 dark:hover:bg-sky-500/20"
+                                                                >
+                                                                    Open wizard →
+                                                                </Link>
+                                                            )}
+                                                        </li>
+                                                    ),
+                                                )}
+                                            </ul>
+                                        </div>
+                                    )}
+
                                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/70">
                                     <p className="text-[11px] font-medium text-slate-800 dark:text-slate-200">
                                         Status
@@ -661,23 +1043,342 @@ export default function AdminCoinsIndex() {
                                                 selectedCoin.status}
                                         </span>
                                     </p>
+                                    {selectedCoin.reviewed_at && (
+                                        <p className="mt-2 text-[10px] text-slate-500 dark:text-slate-500">
+                                            Reviewed by{' '}
+                                            {selectedCoin.reviewer_name ||
+                                                'admin'}{' '}
+                                            on {selectedCoin.reviewed_at}
+                                        </p>
+                                    )}
+                                    {selectedCoin.status === 'rejected' &&
+                                        selectedCoin.rejection_reason && (
+                                            <p className="mt-2 rounded-md border border-red-200 bg-red-50 p-2 text-[11px] text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
+                                                <span className="font-medium">
+                                                    Reason:
+                                                </span>{' '}
+                                                {selectedCoin.rejection_reason}
+                                            </p>
+                                        )}
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    <DialogFooter className="mt-4 flex items-center justify-end gap-2">
+                    {selectedCoin?.status === 'pending_review' &&
+                        rejectMode && (
+                            <div className="mt-4 space-y-2 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-500/30 dark:bg-red-500/5">
+                                <label className="text-[11px] font-medium text-red-800 dark:text-red-200">
+                                    Rejection reason{' '}
+                                    <span className="text-red-500">*</span>
+                                </label>
+                                <Textarea
+                                    rows={3}
+                                    value={rejectReason}
+                                    onChange={(e) =>
+                                        setRejectReason(e.target.value)
+                                    }
+                                    placeholder="Tell the borrower why this coin is being rejected (e.g. amount too high, weak supporting docs, duplicate request)."
+                                    className="bg-white text-xs dark:bg-slate-950"
+                                />
+                                {rejectError && (
+                                    <p className="text-[11px] text-red-600 dark:text-red-300">
+                                        {rejectError}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
+                    <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                        {selectedCoin?.status === 'pending_review' ? (
+                            rejectMode ? (
+                                <>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="border-slate-300 text-xs text-slate-800 hover:border-slate-500 hover:text-slate-900 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-400"
+                                        onClick={() => {
+                                            setRejectMode(false);
+                                            setRejectReason('');
+                                            setRejectError(null);
+                                        }}
+                                        disabled={reviewing !== null}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        className="bg-red-600 text-xs text-white hover:bg-red-500"
+                                        onClick={handleReject}
+                                        disabled={reviewing !== null}
+                                    >
+                                        {reviewing === 'reject' ? (
+                                            <LoaderCircle className="mr-1 h-3 w-3 animate-spin" />
+                                        ) : (
+                                            <XCircle className="mr-1 h-3 w-3" />
+                                        )}
+                                        Confirm rejection
+                                    </Button>
+                                </>
+                            ) : (
+                                <>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="border-red-300 text-xs text-red-700 hover:border-red-500 hover:text-red-800 dark:border-red-500/40 dark:text-red-300 dark:hover:border-red-400"
+                                        onClick={() => setRejectMode(true)}
+                                        disabled={reviewing !== null}
+                                    >
+                                        <XCircle className="mr-1 h-3 w-3" />
+                                        Reject
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        className="bg-emerald-600 text-xs text-white hover:bg-emerald-500"
+                                        onClick={() => openTermsForm('approve')}
+                                        disabled={reviewing !== null}
+                                    >
+                                        <CheckCircle2 className="mr-1 h-3 w-3" />
+                                        Approve with terms
+                                    </Button>
+                                </>
+                            )
+                        ) : (
+                            <div className="flex flex-wrap gap-2">
+                                {selectedCoin?.status === 'approved' &&
+                                !selectedCoin.terms.borrower_agreed_at &&
+                                !selectedCoin.interests.some(
+                                    (i) => i.funding_status !== 'interested',
+                                ) ? (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="border-slate-300 text-xs"
+                                        onClick={() => openTermsForm('edit')}
+                                    >
+                                        Edit terms
+                                    </Button>
+                                ) : null}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-slate-300 text-xs text-slate-800 hover:border-slate-500 hover:text-slate-900 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-400"
+                                    onClick={() => setViewOpen(false)}
+                                >
+                                    Close
+                                </Button>
+                            </div>
+                        )}
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={termsMode !== null}
+                onOpenChange={(o) => (o ? null : closeTermsForm())}
+            >
+                <DialogContent className="sm:max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {termsMode === 'edit'
+                                ? 'Edit commercial terms'
+                                : 'Approve with terms'}
+                        </DialogTitle>
+                        <DialogDescription>
+                            Set the interest rate and repayment schedule for this
+                            coin. Both the borrower and any interested investors
+                            will need to agree before funding can start.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        <Field
+                            label="Interest rate (annual %)"
+                            value={terms.interest_rate}
+                            onChange={(v) =>
+                                setTerms((t) => ({ ...t, interest_rate: v }))
+                            }
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            error={termsErrors.interest_rate}
+                            required
+                        />
+                        <Field
+                            label="Service fee % (optional)"
+                            value={terms.service_fee_percent}
+                            onChange={(v) =>
+                                setTerms((t) => ({
+                                    ...t,
+                                    service_fee_percent: v,
+                                }))
+                            }
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            error={termsErrors.service_fee_percent}
+                        />
+                        <Field
+                            label="Loan duration (days)"
+                            value={terms.duration_days}
+                            onChange={(v) =>
+                                setTerms((t) => ({ ...t, duration_days: v }))
+                            }
+                            type="number"
+                            min="1"
+                            error={termsErrors.duration_days}
+                            required
+                        />
+                        <Field
+                            label="# of installments"
+                            value={terms.installments_count}
+                            onChange={(v) =>
+                                setTerms((t) => ({
+                                    ...t,
+                                    installments_count: v,
+                                }))
+                            }
+                            type="number"
+                            min="1"
+                            max="60"
+                            error={termsErrors.installments_count}
+                            required
+                        />
+                        <Field
+                            label="Days between installments"
+                            value={terms.installment_interval_days}
+                            onChange={(v) =>
+                                setTerms((t) => ({
+                                    ...t,
+                                    installment_interval_days: v,
+                                }))
+                            }
+                            type="number"
+                            min="1"
+                            max="365"
+                            error={termsErrors.installment_interval_days}
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-xs font-medium">
+                            Terms note (optional)
+                        </label>
+                        <Textarea
+                            rows={3}
+                            value={terms.terms_text}
+                            onChange={(e) =>
+                                setTerms((t) => ({
+                                    ...t,
+                                    terms_text: e.target.value,
+                                }))
+                            }
+                            placeholder="Any conditions or context the borrower / investor should see."
+                        />
+                        {termsErrors.terms_text ? (
+                            <p className="text-xs text-red-600">
+                                {termsErrors.terms_text}
+                            </p>
+                        ) : null}
+                    </div>
+
+                    <div className="rounded-md border bg-muted/30 p-3 text-xs">
+                        <p className="font-medium">Live preview</p>
+                        {previewRepayment ? (
+                            <ul className="mt-1 space-y-1">
+                                <li className="flex justify-between">
+                                    <span className="text-muted-foreground">
+                                        Total repayment
+                                    </span>
+                                    <span className="font-medium">
+                                        ZMW{' '}
+                                        {previewRepayment.total.toLocaleString(
+                                            undefined,
+                                            { maximumFractionDigits: 2 },
+                                        )}
+                                    </span>
+                                </li>
+                                <li className="flex justify-between">
+                                    <span className="text-muted-foreground">
+                                        Per installment
+                                    </span>
+                                    <span className="font-medium">
+                                        ZMW{' '}
+                                        {previewRepayment.installmentAmount.toLocaleString(
+                                            undefined,
+                                            { maximumFractionDigits: 2 },
+                                        )}
+                                    </span>
+                                </li>
+                            </ul>
+                        ) : (
+                            <p className="text-muted-foreground">
+                                Fill in the rate, duration and installments to see
+                                a calculated total.
+                            </p>
+                        )}
+                    </div>
+
+                    <DialogFooter>
                         <Button
                             variant="outline"
-                            size="sm"
-                            className="border-slate-300 text-xs text-slate-800 hover:border-slate-500 hover:text-slate-900 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-400"
-                            onClick={() => setViewOpen(false)}
+                            onClick={closeTermsForm}
+                            disabled={reviewing !== null}
                         >
-                            Close
+                            Cancel
+                        </Button>
+                        <Button onClick={submitTerms} disabled={reviewing !== null}>
+                            {reviewing === 'approve' || reviewing === 'terms' ? (
+                                <LoaderCircle className="mr-1 h-3 w-3 animate-spin" />
+                            ) : null}
+                            {termsMode === 'edit'
+                                ? 'Save terms'
+                                : 'Approve coin'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
         </AppLayout>
+    );
+}
+
+function Field({
+    label,
+    value,
+    onChange,
+    error,
+    type = 'text',
+    step,
+    min,
+    max,
+    required,
+}: {
+    label: string;
+    value: string;
+    onChange: (v: string) => void;
+    error?: string;
+    type?: string;
+    step?: string;
+    min?: string;
+    max?: string;
+    required?: boolean;
+}) {
+    return (
+        <div>
+            <label className="text-xs font-medium">
+                {label}
+                {required ? <span className="text-red-500"> *</span> : null}
+            </label>
+            <Input
+                type={type}
+                step={step}
+                min={min}
+                max={max}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+            />
+            {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
+        </div>
     );
 }

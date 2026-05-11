@@ -1,127 +1,106 @@
-// resources/js/Pages/auth/select-role/index.tsx
+import AuthLayout from '@/layouts/auth-layout';
+import { login } from '@/routes';
+import { Head, Link } from '@inertiajs/react';
+import { ArrowRight, Building2, LineChart } from 'lucide-react';
 
-import { Link } from '@inertiajs/react';
-import { motion, Variants } from 'framer-motion';
-import React from 'react';
-
-const containerVariants: Variants = {
-    hidden: { opacity: 0, y: 30 },
-    visible: {
-        opacity: 1,
-        y: 0,
-        transition: { duration: 0.4, ease: 'easeOut' },
+const roles = [
+    {
+        href: '/signup/borrower',
+        eyebrow: 'For SMEs',
+        title: 'I want to borrow',
+        icon: Building2,
+        description:
+            'Apply for credit, track repayments, and manage your business credit profile in one place.',
+        bullets: [
+            'Flexible loan applications',
+            'Repayment schedules & reminders',
+            'Credit performance overview',
+        ],
     },
-};
-
-const cardVariants: Variants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: (i: number) => ({
-        opacity: 1,
-        y: 0,
-        transition: { delay: 0.15 * i, duration: 0.35 },
-    }),
-    hover: {
-        y: -6,
-        scale: 1.02,
-        boxShadow: '0 18px 40px rgba(15, 23, 42, 0.18)',
+    {
+        href: '/signup/investor',
+        eyebrow: 'For investors',
+        title: 'I want to invest',
+        icon: LineChart,
+        description:
+            'Fund borrower portfolios, earn transparent secured returns, and monitor performance over time.',
+        bullets: [
+            'Curated investment opportunities',
+            'Performance analytics',
+            'Track capital & returns',
+        ],
     },
-};
+];
 
-const RoleSelectPage: React.FC = () => {
+export default function SelectRole() {
     return (
-        <div className="flex min-h-screen items-center justify-center bg-black text-slate-50">
-            <motion.div
-                className="mx-auto w-full max-w-3xl px-4"
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
+        <AuthLayout
+            title="Join CreditCo"
+            description="Choose how you want to get started. You can always switch later from your account."
+            image="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1600&q=80"
+        >
+            <Head title="Sign up" />
+
+            <div className="flex flex-col gap-3">
+                {roles.map((role) => {
+                    const Icon = role.icon;
+                    return (
+                        <Link
+                            key={role.href}
+                            href={role.href}
+                            className="group flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:border-white/30 hover:bg-white/[0.05]"
+                        >
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-white">
+                                        <Icon className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-medium tracking-widest text-white/40 uppercase">
+                                            {role.eyebrow}
+                                        </p>
+                                        <h2 className="text-base font-semibold text-white">
+                                            {role.title}
+                                        </h2>
+                                    </div>
+                                </div>
+                                <ArrowRight className="mt-2 h-4 w-4 shrink-0 text-white/40 transition group-hover:translate-x-0.5 group-hover:text-white" />
+                            </div>
+
+                            <p className="text-sm text-white/60">
+                                {role.description}
+                            </p>
+
+                            <ul className="grid gap-1.5 text-[12px] text-white/50">
+                                {role.bullets.map((b) => (
+                                    <li
+                                        key={b}
+                                        className="flex items-center gap-2"
+                                    >
+                                        <span className="h-1 w-1 rounded-full bg-white/40" />
+                                        {b}
+                                    </li>
+                                ))}
+                            </ul>
+                        </Link>
+                    );
+                })}
+            </div>
+
+            <div className="mt-8 flex items-center gap-3 text-[11px] text-white/40">
+                <span className="h-px flex-1 bg-white/10" />
+                <span className="tracking-wide uppercase">
+                    Already have an account?
+                </span>
+                <span className="h-px flex-1 bg-white/10" />
+            </div>
+
+            <Link
+                href={login.url()}
+                className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-transparent text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/[0.05]"
             >
-                {/* Heading */}
-                <div className="mb-10 text-center">
-                    <h1 className="mb-2 text-3xl font-semibold md:text-4xl">
-                        Join <span className="text-emerald-400">CreditCo</span>
-                    </h1>
-                    <p className="text-sm text-slate-400 md:text-base">
-                        Choose how you want to get started.
-                    </p>
-                </div>
-
-                {/* Cards */}
-                <div className="grid gap-6 md:grid-cols-2">
-                    {/* Borrower */}
-                    <Link href="/signup/borrower">
-                        <motion.div
-                            className="h-full cursor-pointer rounded-2xl border border-slate-800 bg-slate-900/70 p-6 backdrop-blur-sm"
-                            variants={cardVariants}
-                            initial="hidden"
-                            animate="visible"
-                            whileHover="hover"
-                            custom={0}
-                        >
-                            <div className="mb-4 flex items-start justify-between">
-                                <h2 className="text-xl font-semibold text-slate-50">
-                                    I want to borrow
-                                </h2>
-                                <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-300">
-                                    Borrower
-                                </span>
-                            </div>
-                            <p className="mb-4 text-sm text-slate-400">
-                                Apply for credit, track your repayments, and
-                                manage your credit profile in one place.
-                            </p>
-                            <ul className="space-y-1 text-xs text-slate-400">
-                                <li>• Flexible loan applications</li>
-                                <li>• Repayment schedules & reminders</li>
-                                <li>• Credit performance overview</li>
-                            </ul>
-                        </motion.div>
-                    </Link>
-
-                    {/* Investor */}
-                    <Link href="/signup/investor">
-                        <motion.div
-                            className="h-full cursor-pointer rounded-2xl border border-slate-800 bg-slate-900/70 p-6 backdrop-blur-sm"
-                            variants={cardVariants}
-                            initial="hidden"
-                            animate="visible"
-                            whileHover="hover"
-                            custom={1}
-                        >
-                            <div className="mb-4 flex items-start justify-between">
-                                <h2 className="text-xl font-semibold text-slate-50">
-                                    I want to invest
-                                </h2>
-                                <span className="rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-1 text-xs text-sky-300">
-                                    Investor
-                                </span>
-                            </div>
-                            <p className="mb-4 text-sm text-slate-400">
-                                Fund borrower portfolios, earn returns, and
-                                monitor your investment performance.
-                            </p>
-                            <ul className="space-y-1 text-xs text-slate-400">
-                                <li>• Create investment profiles</li>
-                                <li>• View performance analytics</li>
-                                <li>• Track capital & returns</li>
-                            </ul>
-                        </motion.div>
-                    </Link>
-                </div>
-
-                {/* Login link */}
-                <div className="mt-8 text-center text-xs text-slate-500">
-                    Already have an account?{' '}
-                    <Link
-                        href="/login"
-                        className="text-emerald-400 underline-offset-2 hover:text-emerald-300 hover:underline"
-                    >
-                        Log in
-                    </Link>
-                </div>
-            </motion.div>
-        </div>
+                Log in
+            </Link>
+        </AuthLayout>
     );
-};
-
-export default RoleSelectPage;
+}

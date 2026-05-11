@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Borrower extends Model
 {
-  protected $fillable = [
+    protected $fillable = [
         'user_id',
         'company_name',
         'company_registration_number',
@@ -24,11 +24,11 @@ class Borrower extends Model
         'status',
     ];
 
-         public const REQUIRED_DOCUMENTS = [
-        'registration_documents'  => 'Registration documents',
-        'bank_statement'          => 'Bank statement',
-        'company_printout'        => 'Company print-out',
-        'contact_id_document'     => 'Contact ID copy',
+    public const REQUIRED_DOCUMENTS = [
+        'registration_documents' => 'Registration documents',
+        'bank_statement' => 'Bank statement',
+        'company_printout' => 'Company print-out',
+        'contact_id_document' => 'Contact ID copy',
     ];
 
     public static function requiredDocuments(): array
@@ -36,19 +36,24 @@ class Borrower extends Model
         return self::REQUIRED_DOCUMENTS;
     }
 
-    public function user() 
+    public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    public function coins() 
+    public function coins()
     {
         return $this->hasMany(Coin::class);
     }
 
-    public function documentVerifications() 
+    public function documentVerifications()
     {
         return $this->hasMany(BorrowerDocumentVerification::class);
+    }
+
+    public function payoutMethod()
+    {
+        return $this->hasOne(BorrowerPayoutMethod::class);
     }
 
     public function hasAllRequiredDocumentsVerified(): bool

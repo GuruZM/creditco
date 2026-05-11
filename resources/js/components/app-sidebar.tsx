@@ -15,9 +15,11 @@ import {
     BookOpen,
     BriefcaseBusiness,
     Coins,
+    CreditCard,
     Folder,
     HandCoins,
     LayoutGrid,
+    Receipt,
     Users,
 } from 'lucide-react';
 import AppLogo from './app-logo';
@@ -87,6 +89,16 @@ export function AppSidebar() {
                 icon: Coins,
             },
             {
+                title: 'Repayments',
+                href: '/admin/repayments',
+                icon: Receipt,
+            },
+            {
+                title: 'Subscriptions',
+                href: '/admin/subscriptions',
+                icon: CreditCard,
+            },
+            {
                 title: 'Users',
                 href: '/users',
                 icon: Users,
@@ -116,6 +128,11 @@ export function AppSidebar() {
                 title: 'Coins',
                 href: '/borrower/coins',
                 icon: HandCoins,
+            },
+            {
+                title: 'Repayments',
+                href: '/borrower/repayments',
+                icon: Receipt,
             },
         ];
     }

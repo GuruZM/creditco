@@ -3,18 +3,40 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     ArrowRight,
     Calendar,
+    CheckCircle2,
     Clock,
     Coins,
     Filter,
+    LoaderCircle,
     Search,
+    Users,
 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type CoinStatus = 'pending_review' | 'approved' | 'rejected' | string;
+
+type CoinTerms = {
+    interest_rate: number;
+    service_fee_percent: number | null;
+    duration_days: number | null;
+    installments_count: number | null;
+    installment_interval_days: number | null;
+    total_repayment_amount: number;
+    installment_amount: number;
+    terms_text: string | null;
+};
 
 type Coin = {
     id: number;
@@ -27,7 +49,10 @@ type Coin = {
     duration: string | null;
     industry: string | null;
     status: CoinStatus;
+    interests_count: number;
+    is_interested: boolean;
     created_at: string | null;
+    terms: CoinTerms;
 };
 
 type Paginated<T> = {
@@ -62,6 +87,34 @@ export default function InvestorCoinsIndex() {
     const [industry, setIndustry] = useState(filters.industry || '');
     const [minAmount, setMinAmount] = useState(filters.min_amount || '');
     const [maxAmount, setMaxAmount] = useState(filters.max_amount || '');
+    const [submittingId, setSubmittingId] = useState<number | null>(null);
+
+    const [interestCoin, setInterestCoin] = useState<Coin | null>(null);
+    const [interestAgreed, setInterestAgreed] = useState(false);
+
+    const openInterestDialog = (coin: Coin) => {
+        setInterestCoin(coin);
+        setInterestAgreed(false);
+    };
+
+    const closeInterestDialog = () => {
+        setInterestCoin(null);
+        setInterestAgreed(false);
+    };
+
+    const expressInterest = () => {
+        if (!interestCoin || !interestAgreed) return;
+        setSubmittingId(interestCoin.id);
+        router.post(
+            `/investor/coins/${interestCoin.id}/interest`,
+            { agreed: true },
+            {
+                preserveScroll: true,
+                onFinish: () => setSubmittingId(null),
+                onSuccess: () => closeInterestDialog(),
+            },
+        );
+    };
 
     const totalCoins = coins.data.length;
 
@@ -354,6 +407,47 @@ export default function InvestorCoinsIndex() {
                                                         </span>
                                                     )}
                                                 </div>
+
+                                                <div className="mt-2 grid grid-cols-2 gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-2 text-[10px] text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
+                                                    <div>
+                                                        <p className="text-[9px] uppercase opacity-70">
+                                                            Interest
+                                                        </p>
+                                                        <p className="font-semibold">
+                                                            {coin.terms.interest_rate}
+                                                            %
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] uppercase opacity-70">
+                                                            Total repayment
+                                                        </p>
+                                                        <p className="font-semibold">
+                                                            ZMW{' '}
+                                                            {coin.terms.total_repayment_amount.toLocaleString()}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] uppercase opacity-70">
+                                                            Installments
+                                                        </p>
+                                                        <p className="font-semibold">
+                                                            {coin.terms.installments_count}{' '}
+                                                            ×{' '}
+                                                            {coin.terms.installment_interval_days}
+                                                            d
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] uppercase opacity-70">
+                                                            Per installment
+                                                        </p>
+                                                        <p className="font-semibold">
+                                                            ZMW{' '}
+                                                            {coin.terms.installment_amount.toLocaleString()}
+                                                        </p>
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             <div className="mt-4 flex items-end justify-between gap-3">
@@ -373,18 +467,42 @@ export default function InvestorCoinsIndex() {
                                                     )}
                                                 </div>
 
-                                                {/* For now, this is purely visual.
-                            Later we can wire "Express interest" to a POST route. */}
-                                                <Button
-                                                    size="sm"
-                                                    className="bg-emerald-600 text-[11px] text-white hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400"
-                                                    type="button"
-                                                    disabled
-                                                    title="We'll wire this to an interest flow next."
-                                                >
-                                                    Express interest
-                                                    <ArrowRight className="ml-1 h-3 w-3" />
-                                                </Button>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="inline-flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
+                                                        <Users className="h-3 w-3" />
+                                                        {coin.interests_count}{' '}
+                                                        interested
+                                                    </span>
+
+                                                    {coin.is_interested ? (
+                                                        <span className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+                                                            <CheckCircle2 className="h-3 w-3" />
+                                                            Interest noted
+                                                        </span>
+                                                    ) : (
+                                                        <Button
+                                                            size="sm"
+                                                            type="button"
+                                                            className="bg-emerald-600 text-[11px] text-white hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                                                            disabled={
+                                                                submittingId ===
+                                                                coin.id
+                                                            }
+                                                            onClick={() =>
+                                                                openInterestDialog(
+                                                                    coin,
+                                                                )
+                                                            }
+                                                        >
+                                                            {submittingId ===
+                                                            coin.id ? (
+                                                                <LoaderCircle className="mr-1 h-3 w-3 animate-spin" />
+                                                            ) : null}
+                                                            Express interest
+                                                            <ArrowRight className="ml-1 h-3 w-3" />
+                                                        </Button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -431,6 +549,134 @@ export default function InvestorCoinsIndex() {
                     </TabsContent>
                 </Tabs>
             </div>
+
+            <Dialog
+                open={interestCoin !== null}
+                onOpenChange={(o) => (o ? null : closeInterestDialog())}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Express interest</DialogTitle>
+                        <DialogDescription>
+                            Review the commercial terms before noting your
+                            interest. Your investment will be governed by these
+                            terms once admin matches you.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {interestCoin ? (
+                        <div className="space-y-3 text-sm">
+                            <div className="rounded-md border bg-muted/30 p-3 text-xs">
+                                <ul className="grid grid-cols-2 gap-2">
+                                    <li>
+                                        <span className="text-muted-foreground">
+                                            Capital
+                                        </span>
+                                        <p className="font-semibold">
+                                            ZMW{' '}
+                                            {interestCoin.request_amount.toLocaleString()}
+                                        </p>
+                                    </li>
+                                    <li>
+                                        <span className="text-muted-foreground">
+                                            Interest
+                                        </span>
+                                        <p className="font-semibold">
+                                            {interestCoin.terms.interest_rate}%
+                                            (annual)
+                                        </p>
+                                    </li>
+                                    <li>
+                                        <span className="text-muted-foreground">
+                                            Duration
+                                        </span>
+                                        <p className="font-semibold">
+                                            {interestCoin.terms.duration_days}{' '}
+                                            days
+                                        </p>
+                                    </li>
+                                    <li>
+                                        <span className="text-muted-foreground">
+                                            Installments
+                                        </span>
+                                        <p className="font-semibold">
+                                            {
+                                                interestCoin.terms
+                                                    .installments_count
+                                            }{' '}
+                                            ×{' '}
+                                            {
+                                                interestCoin.terms
+                                                    .installment_interval_days
+                                            }
+                                            d
+                                        </p>
+                                    </li>
+                                    <li>
+                                        <span className="text-muted-foreground">
+                                            Per installment
+                                        </span>
+                                        <p className="font-semibold">
+                                            ZMW{' '}
+                                            {interestCoin.terms.installment_amount.toLocaleString()}
+                                        </p>
+                                    </li>
+                                    <li>
+                                        <span className="text-muted-foreground">
+                                            Total repayment
+                                        </span>
+                                        <p className="font-semibold text-emerald-700 dark:text-emerald-300">
+                                            ZMW{' '}
+                                            {interestCoin.terms.total_repayment_amount.toLocaleString()}
+                                        </p>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            {interestCoin.terms.terms_text ? (
+                                <div className="rounded-md border bg-muted/30 p-3 text-xs">
+                                    <p className="font-medium">Notes</p>
+                                    <p className="mt-1 whitespace-pre-line text-muted-foreground">
+                                        {interestCoin.terms.terms_text}
+                                    </p>
+                                </div>
+                            ) : null}
+
+                            <label className="flex items-start gap-2 text-xs">
+                                <input
+                                    type="checkbox"
+                                    className="mt-0.5"
+                                    checked={interestAgreed}
+                                    onChange={(e) =>
+                                        setInterestAgreed(e.target.checked)
+                                    }
+                                />
+                                <span>
+                                    I agree to the commercial terms and confirm
+                                    my interest in funding this coin.
+                                </span>
+                            </label>
+                        </div>
+                    ) : null}
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={closeInterestDialog}
+                            disabled={submittingId !== null}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={expressInterest}
+                            disabled={!interestAgreed || submittingId !== null}
+                        >
+                            {submittingId === interestCoin?.id ? (
+                                <LoaderCircle className="mr-1 h-3 w-3 animate-spin" />
+                            ) : null}
+                            Confirm interest
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

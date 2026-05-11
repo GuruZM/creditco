@@ -3,19 +3,18 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
- 
 use App\Models\User;
- 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
+
 class UserController extends Controller
 {
-       public function index(Request $request)
+    public function index(Request $request)
     {
         $search = $request->string('search')->toString();
-        $role   = $request->string('role')->toString();
+        $role = $request->string('role')->toString();
         $status = $request->string('status')->toString(); // e.g. active/suspended
 
         $query = User::query()->with('roles');
@@ -43,11 +42,11 @@ class UserController extends Controller
             ->paginate(15)
             ->through(function (User $user) {
                 return [
-                    'id'         => $user->id,
-                    'name'       => $user->name,
-                    'email'      => $user->email,
-                    'status'     => $user->status ?? 'active',
-                    'roles'      => $user->roles->pluck('name')->all(),
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'status' => $user->status ?? 'active',
+                    'roles' => $user->roles->pluck('name')->all(),
                     'created_at' => $user->created_at?->toDateTimeString(),
                 ];
             });
@@ -58,7 +57,7 @@ class UserController extends Controller
             'users' => $users,
             'filters' => [
                 'search' => $search,
-                'role'   => $role,
+                'role' => $role,
                 'status' => $status,
             ],
             'available_roles' => $roles,
@@ -82,7 +81,7 @@ class UserController extends Controller
      */
     public function resetPassword(User $user)
     {
-        // You can change this to send email, etc.
+
         $tempPassword = 'CreditCo123!'; // or Str::random(12);
 
         $user->update([
@@ -90,7 +89,7 @@ class UserController extends Controller
         ]);
 
         // Optionally store temp password in session just for admin feedback
-        return redirect()->back()->with('success', "Password reset to temporary value.");
+        return redirect()->back()->with('success', 'Password reset to temporary value.');
     }
 
     /**

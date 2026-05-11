@@ -1,117 +1,121 @@
 import RegisteredUserController from '@/actions/App/Http/Controllers/Auth/RegisteredUserController';
-import { login } from '@/routes';
-import { Form, Head } from '@inertiajs/react';
-import { LoaderCircle } from 'lucide-react';
-
-import InputError from '@/components/input-error';
-import TextLink from '@/components/text-link';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import AuthField from '@/components/auth/auth-field';
 import AuthLayout from '@/layouts/auth-layout';
+import { login } from '@/routes';
+import { Form, Head, Link } from '@inertiajs/react';
+import {
+    ArrowRight,
+    AtSign,
+    KeyRound,
+    LoaderCircle,
+    ShieldCheck,
+    User,
+} from 'lucide-react';
 
 export default function Register() {
     return (
         <AuthLayout
-            title="Create an account"
-            description="Enter your details below to create your account"
+            title="Create your account"
+            description="Get started in under a minute. No credit card required."
+            image="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1600&q=80"
         >
             <Head title="Register" />
+
             <Form
                 {...RegisteredUserController.store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
-                className="flex flex-col gap-6"
+                className="flex flex-col gap-5"
             >
                 {({ processing, errors }) => (
                     <>
-                        <div className="grid gap-6">
-                            <div className="grid gap-2">
-                                <Label htmlFor="name">Name</Label>
-                                <Input
-                                    id="name"
-                                    type="text"
-                                    required
-                                    autoFocus
-                                    tabIndex={1}
-                                    autoComplete="name"
-                                    name="name"
-                                    placeholder="Full name"
-                                />
-                                <InputError
-                                    message={errors.name}
-                                    className="mt-2"
-                                />
-                            </div>
+                        <AuthField
+                            label="Full name"
+                            name="name"
+                            type="text"
+                            icon={User}
+                            placeholder="Jane Mwansa"
+                            required
+                            autoFocus
+                            tabIndex={1}
+                            autoComplete="name"
+                            error={errors.name}
+                        />
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    required
-                                    tabIndex={2}
-                                    autoComplete="email"
-                                    name="email"
-                                    placeholder="email@example.com"
-                                />
-                                <InputError message={errors.email} />
-                            </div>
+                        <AuthField
+                            label="Email address"
+                            name="email"
+                            type="email"
+                            icon={AtSign}
+                            placeholder="you@company.com"
+                            required
+                            tabIndex={2}
+                            autoComplete="email"
+                            error={errors.email}
+                        />
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="password">Password</Label>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    required
-                                    tabIndex={3}
-                                    autoComplete="new-password"
-                                    name="password"
-                                    placeholder="Password"
-                                />
-                                <InputError message={errors.password} />
-                            </div>
+                        <AuthField
+                            label="Password"
+                            name="password"
+                            type="password"
+                            icon={KeyRound}
+                            placeholder="At least 8 characters"
+                            required
+                            tabIndex={3}
+                            autoComplete="new-password"
+                            error={errors.password}
+                        />
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="password_confirmation">
-                                    Confirm password
-                                </Label>
-                                <Input
-                                    id="password_confirmation"
-                                    type="password"
-                                    required
-                                    tabIndex={4}
-                                    autoComplete="new-password"
-                                    name="password_confirmation"
-                                    placeholder="Confirm password"
-                                />
-                                <InputError
-                                    message={errors.password_confirmation}
-                                />
-                            </div>
+                        <AuthField
+                            label="Confirm password"
+                            name="password_confirmation"
+                            type="password"
+                            icon={KeyRound}
+                            placeholder="Repeat your password"
+                            required
+                            tabIndex={4}
+                            autoComplete="new-password"
+                            error={errors.password_confirmation}
+                        />
 
-                            <Button
-                                type="submit"
-                                className="mt-2 w-full"
-                                tabIndex={5}
-                                data-test="register-user-button"
-                            >
-                                {processing && (
-                                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                                )}
-                                Create account
-                            </Button>
-                        </div>
+                        <p className="-mt-1 flex items-start gap-2 text-[11px] text-white/45">
+                            <ShieldCheck className="mt-0.5 h-3 w-3 shrink-0 text-white/70" />
+                            By creating an account you agree to our terms and
+                            privacy policy. We'll never sell your data.
+                        </p>
 
-                        <div className="text-center text-sm text-muted-foreground">
-                            Already have an account?{' '}
-                            <TextLink href={login()} tabIndex={6}>
-                                Log in
-                            </TextLink>
-                        </div>
+                        <button
+                            type="submit"
+                            tabIndex={5}
+                            data-test="register-user-button"
+                            className="group mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-white text-sm font-semibold text-black transition hover:scale-[1.01] hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                            {processing ? (
+                                <LoaderCircle className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <>
+                                    Create account
+                                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                                </>
+                            )}
+                        </button>
                     </>
                 )}
             </Form>
+
+            <div className="mt-8 flex items-center gap-3 text-[11px] text-white/40">
+                <span className="h-px flex-1 bg-white/10" />
+                <span className="tracking-wide uppercase">Already a member?</span>
+                <span className="h-px flex-1 bg-white/10" />
+            </div>
+
+            <Link
+                href={login.url()}
+                tabIndex={6}
+                className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-transparent text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/[0.05]"
+            >
+                Sign in instead
+            </Link>
         </AuthLayout>
     );
 }

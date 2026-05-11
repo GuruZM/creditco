@@ -11,7 +11,7 @@ use Inertia\Inertia;
 
 class BorrowerController extends Controller
 {
-       public function index(Request $request)
+    public function index(Request $request)
     {
         $requiredDocuments = Borrower::requiredDocuments();
 
@@ -32,40 +32,40 @@ class BorrowerController extends Controller
                     $latest = $verifications->sortByDesc('created_at')->first();
 
                     $documents[] = [
-                        'type'        => $type,
-                        'label'       => $label,
-                        'verified'    => $latest !== null,
-                        'note'        => $latest?->note,
+                        'type' => $type,
+                        'label' => $label,
+                        'verified' => $latest !== null,
+                        'note' => $latest?->note,
                         'verified_at' => $latest?->created_at?->toDateTimeString(),
                         'verified_by' => $latest?->verifier?->name,
                     ];
                 }
 
                 return [
-                    'id'         => $borrower->id,
-                    'user_id'    => $borrower->user_id,
-                    'company_name'       => $borrower->company_name,
-                    'registration_number'=> $borrower->registration_number,
-                    'industry'           => $borrower->industry,
-                    'status'             => $borrower->status,
-                    'contact_name'       => $borrower->contact_name,
-                    'contact_email'      => $borrower->contact_email,
-                    'contact_phone'      => $borrower->contact_phone,
-                    'created_at'         => $borrower->created_at?->toDateTimeString(),
+                    'id' => $borrower->id,
+                    'user_id' => $borrower->user_id,
+                    'company_name' => $borrower->company_name,
+                    'registration_number' => $borrower->registration_number,
+                    'industry' => $borrower->industry,
+                    'status' => $borrower->status,
+                    'contact_name' => $borrower->contact_name,
+                    'contact_email' => $borrower->contact_email,
+                    'contact_phone' => $borrower->contact_phone,
+                    'created_at' => $borrower->created_at?->toDateTimeString(),
 
                     // Document URLs (built from stored paths)
                     'documents' => [
-                        'registration_documents' => $borrower->registration_documents_path
-                            ? asset('storage/' . $borrower->registration_documents_path)
+                        'registration_documents' => $borrower->reg_documents_path
+                            ? asset('storage/'.$borrower->reg_documents_path)
                             : null,
                         'bank_statement' => $borrower->bank_statement_path
-                            ? asset('storage/' . $borrower->bank_statement_path)
+                            ? asset('storage/'.$borrower->bank_statement_path)
                             : null,
                         'company_printout' => $borrower->company_printout_path
-                            ? asset('storage/' . $borrower->company_printout_path)
+                            ? asset('storage/'.$borrower->company_printout_path)
                             : null,
-                        'contact_id_document' => $borrower->contact_id_document_path
-                            ? asset('storage/' . $borrower->contact_id_document_path)
+                        'contact_id_document' => $borrower->contact_id_copy_path
+                            ? asset('storage/'.$borrower->contact_id_copy_path)
                             : null,
                     ],
 
@@ -78,7 +78,7 @@ class BorrowerController extends Controller
             });
 
         return Inertia::render('admin/borrowers/index', [
-            'borrowers'          => $borrowers,
+            'borrowers' => $borrowers,
             'required_documents' => $requiredDocuments,
         ]);
     }
@@ -94,16 +94,16 @@ class BorrowerController extends Controller
         $requiredDocuments = array_keys(Borrower::requiredDocuments());
 
         $data = $request->validate([
-            'document_type' => ['required', 'string', 'in:' . implode(',', $requiredDocuments)],
-            'note'          => ['nullable', 'string'],
+            'document_type' => ['required', 'string', 'in:'.implode(',', $requiredDocuments)],
+            'note' => ['nullable', 'string'],
         ]);
 
         DB::transaction(function () use ($borrower, $data) {
             BorrowerDocumentVerification::create([
-                'borrower_id'   => $borrower->id,
+                'borrower_id' => $borrower->id,
                 'document_type' => $data['document_type'],
-                'verified_by'   => Auth::id(),
-                'note'          => $data['note'] ?? null,
+                'verified_by' => Auth::id(),
+                'note' => $data['note'] ?? null,
             ]);
 
             // Optional: if all docs are verified after this, you could auto-update status
@@ -130,7 +130,7 @@ class BorrowerController extends Controller
             'note' => ['nullable', 'string'],
         ]);
 
-        DB::transaction(function () use ($borrower, $request) {
+        DB::transaction(function () use ($borrower) {
             $borrower->update([
                 'status' => 'verified',
             ]);

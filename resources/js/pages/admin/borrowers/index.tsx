@@ -222,7 +222,7 @@ export default function BorrowersIndex() {
                             </div>
                         </div>
 
-                        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+                        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
                             <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
                                 <thead className="bg-slate-50 dark:bg-slate-900">
                                     <tr>
@@ -603,16 +603,17 @@ export default function BorrowersIndex() {
 
                                                         <div className="flex items-center gap-2">
                                                             {docUrl && (
-                                                                <Link
+                                                                <a
                                                                     href={
                                                                         docUrl
                                                                     }
                                                                     target="_blank"
+                                                                    rel="noopener noreferrer"
                                                                     className="text-[11px] text-sky-600 underline underline-offset-2 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
                                                                 >
                                                                     View
                                                                     document
-                                                                </Link>
+                                                                </a>
                                                             )}
 
                                                             {!doc.verified &&

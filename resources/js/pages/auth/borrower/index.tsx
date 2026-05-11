@@ -1,7 +1,19 @@
-// resources/js/Pages/auth/borrower/index.tsx
-
-import { Link, useForm, usePage } from '@inertiajs/react';
+import AuthField from '@/components/auth/auth-field';
+import AuthFileField from '@/components/auth/auth-file-field';
+import AuthSelect from '@/components/auth/auth-select';
+import SignupFlowLayout from '@/layouts/auth/signup-flow-layout';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
+import {
+    ArrowLeft,
+    ArrowRight,
+    Building2,
+    FileText,
+    LoaderCircle,
+    Receipt,
+    UserCircle2,
+    Wallet,
+} from 'lucide-react';
 import React, { FormEvent, useState } from 'react';
 
 interface BorrowerOnboardingForm {
@@ -22,28 +34,43 @@ interface BorrowerOnboardingForm {
     contact_address: string;
 }
 
-const containerVariants: Variants = {
-    hidden: { opacity: 0, y: 30 },
-    visible: {
-        opacity: 1,
-        y: 0,
-        transition: { duration: 0.35, ease: 'easeOut' },
-    },
+const stepVariants: Variants = {
+    initial: { opacity: 0, x: 24 },
+    animate: { opacity: 1, x: 0, transition: { duration: 0.25 } },
+    exit: { opacity: 0, x: -24, transition: { duration: 0.2 } },
 };
 
-const stepVariants: Variants = {
-    initial: { opacity: 0, x: 40 },
-    animate: {
-        opacity: 1,
-        x: 0,
-        transition: { duration: 0.25 },
-    },
-    exit: {
-        opacity: 0,
-        x: -40,
-        transition: { duration: 0.2 },
-    },
-};
+const COMPANY_TYPES = [
+    { value: 'limited', label: 'Limited company' },
+    { value: 'sole_prop', label: 'Sole proprietor' },
+    { value: 'partnership', label: 'Partnership' },
+    { value: 'ngo', label: 'NGO / Non-profit' },
+    { value: 'other', label: 'Other' },
+];
+
+const INDUSTRIES = [
+    { value: 'agriculture', label: 'Agriculture' },
+    { value: 'construction', label: 'Construction' },
+    { value: 'manufacturing', label: 'Manufacturing' },
+    { value: 'transport', label: 'Transport & Logistics' },
+    { value: 'finance', label: 'Finance & Insurance' },
+    { value: 'retail', label: 'Retail & Wholesale' },
+    { value: 'ict', label: 'ICT & Technology' },
+    { value: 'mining', label: 'Mining' },
+    { value: 'hospitality', label: 'Hospitality' },
+    { value: 'healthcare', label: 'Healthcare' },
+    { value: 'education', label: 'Education' },
+    { value: 'energy', label: 'Energy' },
+    { value: 'other', label: 'Other' },
+];
+
+const STEPS = [
+    { label: 'Company profile', icon: Building2 },
+    { label: 'Registration documents', icon: FileText },
+    { label: 'Bank statement', icon: Wallet },
+    { label: 'Company printout', icon: Receipt },
+    { label: 'Contact details', icon: UserCircle2 },
+];
 
 const BorrowerOnboardingPage: React.FC = () => {
     const [step, setStep] = useState<number>(0);
@@ -74,15 +101,7 @@ const BorrowerOnboardingPage: React.FC = () => {
         },
     );
 
-    const steps = [
-        'Company profile',
-        'Registration documents',
-        'Bank statement',
-        'Company printout',
-        'Contact details',
-    ];
-
-    const progress = ((step + 1) / steps.length) * 100;
+    const progress = ((step + 1) / STEPS.length) * 100;
 
     const getError = (field: string): string | undefined =>
         localErrors[field] || serverErrors[field];
@@ -99,7 +118,6 @@ const BorrowerOnboardingPage: React.FC = () => {
         const errs: Record<string, string> = {};
 
         if (currentStep === 0) {
-            // Company profile
             if (!data.company_name.trim()) {
                 errs.company_name = 'Company name is required.';
             }
@@ -121,29 +139,17 @@ const BorrowerOnboardingPage: React.FC = () => {
             }
         }
 
-        if (currentStep === 1) {
-            // Reg documents
-            if (!data.reg_documents) {
-                errs.reg_documents = 'Registration documents are required.';
-            }
+        if (currentStep === 1 && !data.reg_documents) {
+            errs.reg_documents = 'Registration documents are required.';
         }
-
-        if (currentStep === 2) {
-            // Bank statement
-            if (!data.bank_statement) {
-                errs.bank_statement = 'Bank statement is required.';
-            }
+        if (currentStep === 2 && !data.bank_statement) {
+            errs.bank_statement = 'Bank statement is required.';
         }
-
-        if (currentStep === 3) {
-            // Company printout
-            if (!data.company_printout) {
-                errs.company_printout = 'Company printout is required.';
-            }
+        if (currentStep === 3 && !data.company_printout) {
+            errs.company_printout = 'Company printout is required.';
         }
 
         if (currentStep === 4) {
-            // Contact details
             if (!data.contact_name.trim()) {
                 errs.contact_name = 'Contact name is required.';
             }
@@ -156,7 +162,6 @@ const BorrowerOnboardingPage: React.FC = () => {
             if (!data.contact_id_copy) {
                 errs.contact_id_copy = 'Copy of ID is required.';
             }
-            // contact_address is optional
         }
 
         if (Object.keys(errs).length > 0) {
@@ -164,36 +169,34 @@ const BorrowerOnboardingPage: React.FC = () => {
             return false;
         }
 
-        // Clear errors for this step if validation passes
-        if (currentStep === 0) {
-            clearStepErrors([
+        const stepFields: Record<number, string[]> = {
+            0: [
                 'company_name',
                 'company_registration_number',
                 'company_type',
                 'years_in_operation',
                 'industry',
-            ]);
-        } else if (currentStep === 1) {
-            clearStepErrors(['reg_documents']);
-        } else if (currentStep === 2) {
-            clearStepErrors(['bank_statement']);
-        } else if (currentStep === 3) {
-            clearStepErrors(['company_printout']);
-        } else if (currentStep === 4) {
-            clearStepErrors([
+            ],
+            1: ['reg_documents'],
+            2: ['bank_statement'],
+            3: ['company_printout'],
+            4: [
                 'contact_name',
                 'contact_email',
                 'contact_phone',
                 'contact_id_copy',
-            ]);
-        }
+            ],
+        };
+        clearStepErrors(stepFields[currentStep] ?? []);
 
         return true;
     };
 
     const nextStep = () => {
-        if (!validateStep(step)) return;
-        if (step < steps.length - 1) {
+        if (!validateStep(step)) {
+            return;
+        }
+        if (step < STEPS.length - 1) {
             setStep((prev) => prev + 1);
         }
     };
@@ -206,606 +209,350 @@ const BorrowerOnboardingPage: React.FC = () => {
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
-
-        // Validate final step before submitting
-        if (!validateStep(step)) return;
-
-        post('/signup/borrower', {
-            forceFormData: true,
-        });
+        if (!validateStep(step)) {
+            return;
+        }
+        post('/signup/borrower', { forceFormData: true });
     };
 
+    const StepIcon = STEPS[step].icon;
+
     return (
-        <div className="flex min-h-screen items-center justify-center bg-black text-slate-50">
-            <motion.div
-                className="mx-auto w-full max-w-4xl px-4 py-8"
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
+        <SignupFlowLayout
+            title="Borrower onboarding"
+            description="Tell us about your business so we can review your application."
+            stepLabel={`Step ${step + 1} of ${STEPS.length}`}
+            progress={progress}
+        >
+            <Head title="Borrower onboarding" />
+
+            <form
+                onSubmit={handleSubmit}
+                encType="multipart/form-data"
+                className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 backdrop-blur-sm sm:p-7"
             >
-                {/* Header */}
-                <div className="mb-6 flex items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-semibold md:text-3xl">
-                            Borrower onboarding
-                        </h1>
-                        <p className="mt-1 text-xs text-slate-400 md:text-sm">
-                            Step {step + 1} of {steps.length} · {steps[step]}
-                        </p>
+                <div className="mb-6 flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-white">
+                        <StepIcon className="h-4 w-4" />
                     </div>
-                    <Link
-                        href="/signup"
-                        className="text-xs text-slate-400 underline underline-offset-4 hover:text-slate-200 md:text-sm"
+                    <div>
+                        <p className="text-[10px] font-medium tracking-widest text-white/40 uppercase">
+                            Section {step + 1}
+                        </p>
+                        <h2 className="text-base font-semibold text-white">
+                            {STEPS[step].label}
+                        </h2>
+                    </div>
+                </div>
+
+                <AnimatePresence mode="wait">
+                    {step === 0 && (
+                        <motion.div
+                            key="step-1"
+                            variants={stepVariants}
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                            className="grid gap-5 md:grid-cols-2"
+                        >
+                            <div className="md:col-span-2">
+                                <AuthField
+                                    label="Company name"
+                                    name="company_name"
+                                    type="text"
+                                    placeholder="Acme Holdings Ltd"
+                                    required
+                                    value={data.company_name}
+                                    onChange={(e) =>
+                                        setData('company_name', e.target.value)
+                                    }
+                                    error={getError('company_name')}
+                                />
+                            </div>
+                            <AuthField
+                                label="Registration / TPIN"
+                                name="company_registration_number"
+                                type="text"
+                                placeholder="e.g. 1001234567"
+                                required
+                                value={data.company_registration_number}
+                                onChange={(e) =>
+                                    setData(
+                                        'company_registration_number',
+                                        e.target.value,
+                                    )
+                                }
+                                error={getError('company_registration_number')}
+                            />
+                            <AuthSelect
+                                label="Company type"
+                                name="company_type"
+                                required
+                                placeholder="Select type"
+                                options={COMPANY_TYPES}
+                                value={data.company_type}
+                                onChange={(e) =>
+                                    setData('company_type', e.target.value)
+                                }
+                                error={getError('company_type')}
+                            />
+                            <AuthField
+                                label="Years in operation"
+                                name="years_in_operation"
+                                type="text"
+                                placeholder="e.g. 5"
+                                required
+                                value={data.years_in_operation}
+                                onChange={(e) =>
+                                    setData(
+                                        'years_in_operation',
+                                        e.target.value.replace(/[^0-9]/g, ''),
+                                    )
+                                }
+                                error={getError('years_in_operation')}
+                            />
+                            <div className="md:col-span-2">
+                                <AuthSelect
+                                    label="Industry"
+                                    name="industry"
+                                    required
+                                    placeholder="Select industry"
+                                    options={INDUSTRIES}
+                                    value={data.industry}
+                                    onChange={(e) =>
+                                        setData('industry', e.target.value)
+                                    }
+                                    error={getError('industry')}
+                                />
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {step === 1 && (
+                        <motion.div
+                            key="step-2"
+                            variants={stepVariants}
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                            className="space-y-4"
+                        >
+                            <p className="text-sm text-white/55">
+                                Upload your company registration documents — for
+                                example PACRA certificate, ZRA registration, or
+                                tax clearance.
+                            </p>
+                            <AuthFileField
+                                label="Registration documents"
+                                name="reg_documents"
+                                accept=".pdf,image/*"
+                                required
+                                hint="PDF or image · max ~10 MB"
+                                value={data.reg_documents}
+                                onChange={(file) =>
+                                    setData('reg_documents', file)
+                                }
+                                error={getError('reg_documents')}
+                            />
+                        </motion.div>
+                    )}
+
+                    {step === 2 && (
+                        <motion.div
+                            key="step-3"
+                            variants={stepVariants}
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                            className="space-y-4"
+                        >
+                            <p className="text-sm text-white/55">
+                                Upload a recent bank statement so we can assess
+                                your cash flow.
+                            </p>
+                            <AuthFileField
+                                label="Latest bank statement"
+                                name="bank_statement"
+                                accept=".pdf"
+                                required
+                                hint="PDF only"
+                                value={data.bank_statement}
+                                onChange={(file) =>
+                                    setData('bank_statement', file)
+                                }
+                                error={getError('bank_statement')}
+                            />
+                        </motion.div>
+                    )}
+
+                    {step === 3 && (
+                        <motion.div
+                            key="step-4"
+                            variants={stepVariants}
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                            className="space-y-4"
+                        >
+                            <p className="text-sm text-white/55">
+                                Upload a recent PACRA company printout or
+                                equivalent profile document.
+                            </p>
+                            <AuthFileField
+                                label="Company printout"
+                                name="company_printout"
+                                accept=".pdf,image/*"
+                                required
+                                hint="PDF or image"
+                                value={data.company_printout}
+                                onChange={(file) =>
+                                    setData('company_printout', file)
+                                }
+                                error={getError('company_printout')}
+                            />
+                        </motion.div>
+                    )}
+
+                    {step === 4 && (
+                        <motion.div
+                            key="step-5"
+                            variants={stepVariants}
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                            className="space-y-5"
+                        >
+                            <div className="grid gap-5 md:grid-cols-2">
+                                <AuthField
+                                    label="Full names"
+                                    name="contact_name"
+                                    type="text"
+                                    placeholder="Jane Mwansa"
+                                    required
+                                    value={data.contact_name}
+                                    onChange={(e) =>
+                                        setData('contact_name', e.target.value)
+                                    }
+                                    error={getError('contact_name')}
+                                />
+                                <AuthField
+                                    label="Email"
+                                    name="contact_email"
+                                    type="email"
+                                    placeholder="you@company.com"
+                                    required
+                                    value={data.contact_email}
+                                    onChange={(e) =>
+                                        setData('contact_email', e.target.value)
+                                    }
+                                    error={getError('contact_email')}
+                                />
+                                <AuthField
+                                    label="Phone number"
+                                    name="contact_phone"
+                                    type="text"
+                                    placeholder="+260 …"
+                                    required
+                                    value={data.contact_phone}
+                                    onChange={(e) =>
+                                        setData('contact_phone', e.target.value)
+                                    }
+                                    error={getError('contact_phone')}
+                                />
+                                <AuthFileField
+                                    label="Copy of ID"
+                                    name="contact_id_copy"
+                                    accept=".pdf,image/*"
+                                    required
+                                    hint="PDF or image"
+                                    value={data.contact_id_copy}
+                                    onChange={(file) =>
+                                        setData('contact_id_copy', file)
+                                    }
+                                    error={getError('contact_id_copy')}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-[11px] font-medium tracking-wide text-white/70 uppercase">
+                                    Physical address{' '}
+                                    <span className="ml-1 text-white/40">
+                                        (optional)
+                                    </span>
+                                </label>
+                                <textarea
+                                    rows={3}
+                                    placeholder="Street, area, town"
+                                    value={data.contact_address}
+                                    onChange={(e) =>
+                                        setData(
+                                            'contact_address',
+                                            e.target.value,
+                                        )
+                                    }
+                                    className="mt-1.5 w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-white/30 transition outline-none focus:border-white/40 focus:bg-white/[0.06]"
+                                />
+                                {getError('contact_address') && (
+                                    <p className="mt-1 text-[11px] font-medium text-red-300">
+                                        {getError('contact_address')}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/65">
+                                <p className="mb-1 font-semibold text-white">
+                                    Next step: payment
+                                </p>
+                                <p className="text-[13px] text-white/55">
+                                    After submitting your details, you&apos;ll
+                                    be redirected to complete payment. Once
+                                    received we&apos;ll generate a reference for
+                                    your application.
+                                </p>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <div className="mt-8 flex items-center justify-between gap-3">
+                    <button
+                        type="button"
+                        onClick={prevStep}
+                        disabled={step === 0}
+                        className="inline-flex h-11 items-center gap-2 rounded-xl border border-white/15 bg-transparent px-4 text-sm font-medium text-white/80 transition hover:border-white/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                        ← Back to role selection
-                    </Link>
-                </div>
+                        <ArrowLeft className="h-4 w-4" />
+                        Back
+                    </button>
 
-                {/* Progress bar */}
-                <div className="mb-6 h-2 w-full overflow-hidden rounded-full bg-slate-800/80">
-                    <motion.div
-                        className="h-2 bg-emerald-400"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
-                        transition={{ duration: 0.25 }}
-                    />
-                </div>
-
-                {/* Form */}
-                <form
-                    onSubmit={handleSubmit}
-                    encType="multipart/form-data"
-                    className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 shadow-xl md:p-8"
-                >
-                    <AnimatePresence mode="wait">
-                        {/* STEP 1: Company profile */}
-                        {step === 0 && (
-                            <motion.div
-                                key="step-1"
-                                variants={stepVariants}
-                                initial="initial"
-                                animate="animate"
-                                exit="exit"
-                            >
-                                <h2 className="mb-4 text-lg font-semibold">
-                                    1. Company profile
-                                </h2>
-                                <p className="mb-4 text-xs text-slate-400">
-                                    Tell us about your company so we can
-                                    understand your business.
-                                </p>
-
-                                <div className="grid gap-4 md:grid-cols-2">
-                                    <div className="md:col-span-2">
-                                        <label className="mb-1 block text-xs text-slate-400">
-                                            Company name{' '}
-                                            <span className="text-red-400">
-                                                *
-                                            </span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
-                                            value={data.company_name}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'company_name',
-                                                    e.target.value,
-                                                )
-                                            }
-                                        />
-                                        {getError('company_name') && (
-                                            <p className="mt-1 text-xs text-red-400">
-                                                {getError('company_name')}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <label className="mb-1 block text-xs text-slate-400">
-                                            Registration / TPIN number{' '}
-                                            <span className="text-red-400">
-                                                *
-                                            </span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
-                                            value={
-                                                data.company_registration_number
-                                            }
-                                            onChange={(e) =>
-                                                setData(
-                                                    'company_registration_number',
-                                                    e.target.value,
-                                                )
-                                            }
-                                        />
-                                        {getError(
-                                            'company_registration_number',
-                                        ) && (
-                                            <p className="mt-1 text-xs text-red-400">
-                                                {getError(
-                                                    'company_registration_number',
-                                                )}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <label className="mb-1 block text-xs text-slate-400">
-                                            Company type{' '}
-                                            <span className="text-red-400">
-                                                *
-                                            </span>
-                                        </label>
-                                        <select
-                                            className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
-                                            value={data.company_type}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'company_type',
-                                                    e.target.value,
-                                                )
-                                            }
-                                        >
-                                            <option value="">
-                                                Select type
-                                            </option>
-                                            <option value="limited">
-                                                Limited company
-                                            </option>
-                                            <option value="sole_prop">
-                                                Sole proprietor
-                                            </option>
-                                            <option value="partnership">
-                                                Partnership
-                                            </option>
-                                            <option value="ngo">
-                                                NGO / Non-profit
-                                            </option>
-                                            <option value="other">Other</option>
-                                        </select>
-                                        {getError('company_type') && (
-                                            <p className="mt-1 text-xs text-red-400">
-                                                {getError('company_type')}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <label className="mb-1 block text-xs text-slate-400">
-                                            Years in operation{' '}
-                                            <span className="text-red-400">
-                                                *
-                                            </span>
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min={0}
-                                            className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
-                                            value={data.years_in_operation}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'years_in_operation',
-                                                    e.target.value,
-                                                )
-                                            }
-                                        />
-                                        {getError('years_in_operation') && (
-                                            <p className="mt-1 text-xs text-red-400">
-                                                {getError('years_in_operation')}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div className="md:col-span-2">
-                                        <label className="mb-1 block text-xs text-slate-400">
-                                            Industry{' '}
-                                            <span className="text-red-400">
-                                                *
-                                            </span>
-                                        </label>
-                                        <select
-                                            className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
-                                            value={data.industry}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'industry',
-                                                    e.target.value,
-                                                )
-                                            }
-                                        >
-                                            <option value="">
-                                                Select industry
-                                            </option>
-                                            <option value="agriculture">
-                                                Agriculture
-                                            </option>
-                                            <option value="construction">
-                                                Construction
-                                            </option>
-                                            <option value="manufacturing">
-                                                Manufacturing
-                                            </option>
-                                            <option value="transport">
-                                                Transport & Logistics
-                                            </option>
-                                            <option value="finance">
-                                                Finance & Insurance
-                                            </option>
-                                            <option value="retail">
-                                                Retail & Wholesale
-                                            </option>
-                                            <option value="ict">
-                                                ICT & Technology
-                                            </option>
-                                            <option value="mining">
-                                                Mining
-                                            </option>
-                                            <option value="hospitality">
-                                                Hospitality
-                                            </option>
-                                            <option value="healthcare">
-                                                Healthcare
-                                            </option>
-                                            <option value="education">
-                                                Education
-                                            </option>
-                                            <option value="energy">
-                                                Energy
-                                            </option>
-                                            <option value="other">Other</option>
-                                        </select>
-                                        {getError('industry') && (
-                                            <p className="mt-1 text-xs text-red-400">
-                                                {getError('industry')}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
-
-                        {/* STEP 2: Reg documents */}
-                        {step === 1 && (
-                            <motion.div
-                                key="step-2"
-                                variants={stepVariants}
-                                initial="initial"
-                                animate="animate"
-                                exit="exit"
-                            >
-                                <h2 className="mb-4 text-lg font-semibold">
-                                    2. Registration documents
-                                </h2>
-                                <p className="mb-4 text-xs text-slate-400">
-                                    Upload your company registration documents
-                                    (e.g. PACRA certificate, ZRA registration,
-                                    tax clearance).
-                                </p>
-
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="mb-1 block text-xs text-slate-400">
-                                            Registration documents (PDF or
-                                            image){' '}
-                                            <span className="text-red-400">
-                                                *
-                                            </span>
-                                        </label>
-                                        <input
-                                            type="file"
-                                            accept=".pdf,image/*"
-                                            className="block w-full text-xs text-slate-300 file:mr-3 file:rounded-md file:border-0 file:bg-emerald-500/80 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-slate-950 hover:file:bg-emerald-400"
-                                            onChange={(e) =>
-                                                setData(
-                                                    'reg_documents',
-                                                    e.target.files?.[0] ?? null,
-                                                )
-                                            }
-                                        />
-                                        {getError('reg_documents') && (
-                                            <p className="mt-1 text-xs text-red-400">
-                                                {getError('reg_documents')}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
-
-                        {/* STEP 3: Bank statement */}
-                        {step === 2 && (
-                            <motion.div
-                                key="step-3"
-                                variants={stepVariants}
-                                initial="initial"
-                                animate="animate"
-                                exit="exit"
-                            >
-                                <h2 className="mb-4 text-lg font-semibold">
-                                    3. Bank statement
-                                </h2>
-                                <p className="mb-4 text-xs text-slate-400">
-                                    Upload a recent bank statement to help us
-                                    assess your cash flow.
-                                </p>
-
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="mb-1 block text-xs text-slate-400">
-                                            Latest bank statement (PDF){' '}
-                                            <span className="text-red-400">
-                                                *
-                                            </span>
-                                        </label>
-                                        <input
-                                            type="file"
-                                            accept=".pdf"
-                                            className="block w-full text-xs text-slate-300 file:mr-3 file:rounded-md file:border-0 file:bg-emerald-500/80 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-slate-950 hover:file:bg-emerald-400"
-                                            onChange={(e) =>
-                                                setData(
-                                                    'bank_statement',
-                                                    e.target.files?.[0] ?? null,
-                                                )
-                                            }
-                                        />
-                                        {getError('bank_statement') && (
-                                            <p className="mt-1 text-xs text-red-400">
-                                                {getError('bank_statement')}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
-
-                        {/* STEP 4: Company printout */}
-                        {step === 3 && (
-                            <motion.div
-                                key="step-4"
-                                variants={stepVariants}
-                                initial="initial"
-                                animate="animate"
-                                exit="exit"
-                            >
-                                <h2 className="mb-4 text-lg font-semibold">
-                                    4. Company print out
-                                </h2>
-                                <p className="mb-4 text-xs text-slate-400">
-                                    Upload a company profile / print-out
-                                    document if available.
-                                </p>
-
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="mb-1 block text-xs text-slate-400">
-                                            Company print out (PDF or image){' '}
-                                            <span className="text-red-400">
-                                                *
-                                            </span>
-                                        </label>
-                                        <input
-                                            type="file"
-                                            accept=".pdf,image/*"
-                                            className="block w-full text-xs text-slate-300 file:mr-3 file:rounded-md file:border-0 file:bg-emerald-500/80 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-slate-950 hover:file:bg-emerald-400"
-                                            onChange={(e) =>
-                                                setData(
-                                                    'company_printout',
-                                                    e.target.files?.[0] ?? null,
-                                                )
-                                            }
-                                        />
-                                        {getError('company_printout') && (
-                                            <p className="mt-1 text-xs text-red-400">
-                                                {getError('company_printout')}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
-
-                        {/* STEP 5: Contact details */}
-                        {step === 4 && (
-                            <motion.div
-                                key="step-5"
-                                variants={stepVariants}
-                                initial="initial"
-                                animate="animate"
-                                exit="exit"
-                            >
-                                <h2 className="mb-4 text-lg font-semibold">
-                                    5. Contact details
-                                </h2>
-                                <p className="mb-4 text-xs text-slate-400">
-                                    Provide contact details for the primary
-                                    person we will deal with.
-                                </p>
-
-                                <div className="grid gap-4 md:grid-cols-2">
-                                    <div>
-                                        <label className="mb-1 block text-xs text-slate-400">
-                                            Full names{' '}
-                                            <span className="text-red-400">
-                                                *
-                                            </span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
-                                            value={data.contact_name}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'contact_name',
-                                                    e.target.value,
-                                                )
-                                            }
-                                        />
-                                        {getError('contact_name') && (
-                                            <p className="mt-1 text-xs text-red-400">
-                                                {getError('contact_name')}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <label className="mb-1 block text-xs text-slate-400">
-                                            Email{' '}
-                                            <span className="text-red-400">
-                                                *
-                                            </span>
-                                        </label>
-                                        <input
-                                            type="email"
-                                            className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
-                                            value={data.contact_email}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'contact_email',
-                                                    e.target.value,
-                                                )
-                                            }
-                                        />
-                                        {getError('contact_email') && (
-                                            <p className="mt-1 text-xs text-red-400">
-                                                {getError('contact_email')}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <label className="mb-1 block text-xs text-slate-400">
-                                            Phone number{' '}
-                                            <span className="text-red-400">
-                                                *
-                                            </span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
-                                            value={data.contact_phone}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'contact_phone',
-                                                    e.target.value,
-                                                )
-                                            }
-                                        />
-                                        {getError('contact_phone') && (
-                                            <p className="mt-1 text-xs text-red-400">
-                                                {getError('contact_phone')}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <label className="mb-1 block text-xs text-slate-400">
-                                            Copy of ID (image or PDF){' '}
-                                            <span className="text-red-400">
-                                                *
-                                            </span>
-                                        </label>
-                                        <input
-                                            type="file"
-                                            accept=".pdf,image/*"
-                                            className="block w-full text-xs text-slate-300 file:mr-3 file:rounded-md file:border-0 file:bg-emerald-500/80 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-slate-950 hover:file:bg-emerald-400"
-                                            onChange={(e) =>
-                                                setData(
-                                                    'contact_id_copy',
-                                                    e.target.files?.[0] ?? null,
-                                                )
-                                            }
-                                        />
-                                        {getError('contact_id_copy') && (
-                                            <p className="mt-1 text-xs text-red-400">
-                                                {getError('contact_id_copy')}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div className="md:col-span-2">
-                                        <label className="mb-1 block text-xs text-slate-400">
-                                            Physical address (optional)
-                                        </label>
-                                        <textarea
-                                            rows={2}
-                                            className="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none"
-                                            value={data.contact_address}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'contact_address',
-                                                    e.target.value,
-                                                )
-                                            }
-                                        />
-                                        {getError('contact_address') && (
-                                            <p className="mt-1 text-xs text-red-400">
-                                                {getError('contact_address')}
-                                            </p>
-                                        )}
-                                        <p className="mt-1 text-[10px] text-slate-500">
-                                            Optional, but helps us verify your
-                                            location if needed.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900/80 p-4 text-xs text-slate-400">
-                                    <p className="mb-1 font-semibold text-slate-200">
-                                        Next step: payment
-                                    </p>
-                                    <p>
-                                        After submitting your onboarding
-                                        details, you'll be redirected to
-                                        complete payment. Once payment is
-                                        received, we’ll generate a reference
-                                        number for your application.
-                                    </p>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
-                    {/* Navigation buttons */}
-                    <div className="mt-8 flex items-center justify-between">
+                    {step < STEPS.length - 1 ? (
                         <button
                             type="button"
-                            onClick={prevStep}
-                            disabled={step === 0}
-                            className={`rounded-lg border bg-slate-900/60 px-4 py-2 text-xs md:text-sm ${
-                                step === 0
-                                    ? 'cursor-not-allowed border-slate-700 text-slate-600'
-                                    : 'border-slate-600 text-slate-200 hover:border-slate-400'
-                            }`}
+                            onClick={nextStep}
+                            className="group inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-semibold text-black transition hover:scale-[1.01] hover:bg-white/90"
                         >
-                            Back
+                            Next
+                            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                         </button>
-
-                        {step < steps.length - 1 ? (
-                            <button
-                                type="button"
-                                onClick={nextStep}
-                                className="rounded-lg bg-emerald-500 px-5 py-2.5 text-xs font-medium text-slate-950 hover:bg-emerald-400 md:text-sm"
-                            >
-                                Next
-                            </button>
-                        ) : (
-                            <button
-                                type="submit"
-                                disabled={processing}
-                                className="rounded-lg bg-emerald-500 px-5 py-2.5 text-xs font-medium text-slate-950 hover:bg-emerald-400 disabled:opacity-60 md:text-sm"
-                            >
-                                {processing
-                                    ? 'Submitting...'
-                                    : 'Submit & proceed to payment'}
-                            </button>
-                        )}
-                    </div>
-                </form>
-            </motion.div>
-        </div>
+                    ) : (
+                        <button
+                            type="submit"
+                            disabled={processing}
+                            className="group inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-semibold text-black transition hover:scale-[1.01] hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                            {processing ? (
+                                <LoaderCircle className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <>
+                                    Submit & continue to payment
+                                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                                </>
+                            )}
+                        </button>
+                    )}
+                </div>
+            </form>
+        </SignupFlowLayout>
     );
 };
 

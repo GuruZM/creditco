@@ -7,13 +7,9 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
-use App\Http\Controllers\Auth\BorrowerRegisterController;
-use App\Http\Controllers\Auth\InvestorRegisterController;
-use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\Auth\RegisterController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('guest')->group(function () {
+Route::middleware('guest')->withoutMiddleware('subscribed')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
 
@@ -39,7 +35,7 @@ Route::middleware('guest')->group(function () {
         ->name('password.store');
 });
 
-Route::middleware('guest')->prefix('signup')->group(function () {
+Route::middleware('guest')->withoutMiddleware('subscribed')->prefix('signup')->group(function () {
 
     // Step 1: choose borrower or investor
     Route::get('/', [\App\Http\Controllers\Auth\RegisterController::class, 'showRoleSelection'])
