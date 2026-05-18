@@ -38,7 +38,7 @@ export default function AuthSimpleLayout({
     return (
         <div className="grid min-h-svh bg-black text-white lg:grid-cols-[1.05fr_1fr]">
             {/* Brand panel */}
-            <div className="relative hidden overflow-hidden border-r border-white/10 lg:flex lg:flex-col">
+            <div className="relative hidden overflow-hidden border-red-400 lg:flex lg:flex-col">
                 {/* Background image */}
                 {image && (
                     <>
@@ -93,7 +93,10 @@ export default function AuthSimpleLayout({
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.7, ease: [0.21, 0.47, 0.32, 0.98] }}
+                        transition={{
+                            duration: 0.7,
+                            ease: [0.21, 0.47, 0.32, 0.98],
+                        }}
                         className="mt-auto"
                     >
                         <p className="text-[11px] font-medium tracking-widest text-white/40 uppercase">
@@ -153,7 +156,7 @@ export default function AuthSimpleLayout({
             {/* Form panel */}
             <div className="relative flex flex-col items-center justify-center bg-black px-6 py-10 sm:px-10">
                 {/* Mobile logo + back link */}
-                <div className="absolute top-6 left-6 right-6 flex items-center justify-between lg:hidden">
+                <div className="absolute top-6 right-6 left-6 flex items-center justify-between lg:hidden">
                     <Link
                         href={home.url()}
                         className="flex items-center gap-2 text-white"
@@ -184,7 +187,9 @@ export default function AuthSimpleLayout({
                             {title}
                         </h1>
                         {description && (
-                            <p className="text-sm text-white/55">{description}</p>
+                            <p className="text-sm text-white/55">
+                                {description}
+                            </p>
                         )}
                     </div>
                     {children}

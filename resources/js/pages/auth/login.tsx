@@ -3,7 +3,13 @@ import AuthField from '@/components/auth/auth-field';
 import AuthLayout from '@/layouts/auth-layout';
 import { request } from '@/routes/password';
 import { Form, Head, Link } from '@inertiajs/react';
-import { ArrowRight, AtSign, CheckCircle2, KeyRound, LoaderCircle } from 'lucide-react';
+import {
+    ArrowRight,
+    AtSign,
+    CheckCircle2,
+    KeyRound,
+    LoaderCircle,
+} from 'lucide-react';
 
 interface LoginProps {
     status?: string;

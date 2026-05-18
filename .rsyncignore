@@ -1,0 +1,67 @@
+# Files and directories rsync should NOT ship to the shared host.
+# Excluded entries are also protected from --delete on the receiver — so the
+# server's .env, storage/, public/storage (the storage:link symlink), etc.
+# stay intact across deploys.
+#
+# Patterns are relative to the rsync source root (the repo root).
+
+# --- Server-managed state — NEVER overwrite or delete ---
+.env
+.env.*
+storage/
+public/storage
+public/hot
+
+# --- Git / CI metadata ---
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# --- Node — host has no Node runtime ---
+node_modules/
+
+# --- Tests and dev configs (not needed at runtime) ---
+tests/
+phpunit.xml
+.phpunit.cache/
+.phpunit.result.cache
+
+# --- Frontend tooling configs (build already produced public/build/) ---
+eslint.config.js
+prettier.config.*
+.prettierrc*
+.prettierignore
+tsconfig.json
+vite.config.ts
+components.json
+boost.json
+package.json
+package-lock.json
+
+# --- Editor / AI tooling ---
+.cursor/
+.mcp.json
+.editorconfig
+.vscode/
+.idea/
+.fleet/
+.nova/
+.zed/
+.phpactor.json
+
+# --- Project docs / notes (not needed at runtime) ---
+README.md
+CLAUDE.md
+AGENTS.md
+DEPLOYMENT.md
+
+# --- Stale archive artifacts from previous FTP deploys ---
+vendor.zip
+public/build.zip
+
+# --- SSR build output (we deploy SPA only) ---
+bootstrap/ssr/
+
+# --- macOS noise ---
+.DS_Store

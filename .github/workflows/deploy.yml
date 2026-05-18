@@ -1,0 +1,135 @@
+# Build the Laravel + Inertia app in CI, then ship the compiled artifact to the
+# shared host over SSH/rsync. The host has no Composer or Node, so every build
+# step runs here and only the final files travel to the server.
+#
+# Server layout (do not change without updating this workflow):
+#   - App code:  /home/credftus/creditco/
+#   - Web root:  /home/credftus/creditco/public/  (cPanel subdomain points here)
+#   - /home/credftus/public_html/ belongs to a different domain and is NEVER touched.
+name: Deploy to production
+
+on:
+  push:
+    branches: [main]
+  # Lets you re-run a deploy from the GitHub UI (Actions → Deploy → Run workflow)
+  # without pushing a new commit. Useful for re-deploying after fixing server state.
+  workflow_dispatch:
+
+# Prevents two deploys from running at once and corrupting the server mid-rsync.
+# `cancel-in-progress: false` means an in-flight deploy finishes before the next
+# one starts, rather than getting killed halfway through.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # PHP version must match the shared host EXACTLY. If the host upgrades,
+      # bump this value too — otherwise composer install may resolve packages
+      # that won't run on the server.
+      - name: Set up PHP 8.2 (matches shared host)
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, bcmath, curl, zip, pdo_mysql
+          tools: composer:v2
+          coverage: none
+
+      # Composer's own package cache (NOT the vendor/ dir). Speeds up installs
+      # by skipping re-downloads when composer.lock hasn't changed.
+      - name: Resolve Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      # --no-dev strips Pest, Pint, Boost, etc. --optimize-autoloader builds a
+      # classmap for production. --prefer-dist pulls zipped releases (faster).
+      - name: Install Composer dependencies (production only)
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
+      # actions/setup-node@v4 with `cache: 'npm'` automatically caches ~/.npm
+      # keyed on package-lock.json — no separate cache step needed.
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      # Vite writes hashed assets to public/build/. The Wayfinder Vite plugin
+      # also regenerates resources/js/{actions,routes,wayfinder} during build.
+      - name: Build frontend assets
+        run: npm run build
+
+      # Loads the deploy private key into an SSH agent for the duration of this
+      # job. The matching public key must be in ~credftus/.ssh/authorized_keys
+      # on the server (see DEPLOYMENT.md).
+      - name: Start SSH agent with deploy key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      # Pinning the server's host key in known_hosts prevents a MITM attacker
+      # from impersonating the server. Generate the value with:
+      #   ssh-keyscan -p <port> -H <host>
+      - name: Pin server host key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      # Maintenance mode goes UP before the rsync so users don't hit a
+      # half-deployed app. `|| true` swallows failures here only — e.g. if the
+      # app isn't fully wired yet on a first deploy. The post-deploy block
+      # below runs under `set -e` so legit failures there still fail the job.
+      - name: Enable maintenance mode on server
+        run: |
+          ssh -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "cd /home/credftus/creditco && php artisan down" || true
+
+      # Sync the built app to /home/credftus/creditco/. Notes:
+      #   --delete removes server-side files that no longer exist locally,
+      #     which is what we want for keeping the deploy clean.
+      #   Excluded files (.env, storage/, public/storage, etc.) are protected
+      #     from --delete by default in rsync — they're skipped on both sides.
+      #   Trailing slash on `./` matters: it means "contents of this dir",
+      #     not "this dir nested inside the target".
+      #   StrictHostKeyChecking=yes forces use of the known_hosts file we wrote.
+      - name: Rsync artifact to server
+        run: |
+          rsync -avz --delete \
+            --exclude-from=.rsyncignore \
+            -e "ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=yes" \
+            ./ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/credftus/creditco/"
+
+      # `set -e` makes the remote shell exit on the first failing command, which
+      # bubbles up as a non-zero exit from ssh and fails this step. The whole
+      # block is sent over a single SSH connection via heredoc.
+      - name: Run post-deploy commands on server
+        run: |
+          ssh -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" bash <<'EOF'
+            set -e
+            cd /home/credftus/creditco
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            php artisan event:cache
+            php artisan up
+          EOF
